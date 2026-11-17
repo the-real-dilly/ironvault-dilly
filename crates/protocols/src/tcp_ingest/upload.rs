@@ -246,7 +246,7 @@ mod tests {
     use super::*;
     use crate::common::{
         dummy_storage::DummyBackend,
-        gateway::is_operation_supported,
+        gateway::{is_operation_supported, with_test_auth_override},
         session::{Protocol, test_session},
     };
     use tokio::io::AsyncWriteExt;
@@ -255,7 +255,22 @@ mod tests {
 
     async fn run(backend: &DummyBackend, data: Vec<u8>, max: u64) -> Result<u64, UploadError> {
         let session = test_session(Protocol::TcpIngest);
-        upload(backend, &session, std::io::Cursor::new(data), "b", "dir/k", max, IDLE).await
+        with_test_auth_override(
+            |_, _, _| true,
+            upload(backend, &session, std::io::Cursor::new(data), "test-bucket", "dir/k", max, IDLE),
+        )
+        .await
+    }
+
+    #[tokio::test]
+    async fn unauthorized_session_stores_nothing() {
+        let backend = DummyBackend::new();
+        let session = test_session(Protocol::TcpIngest);
+        let error = upload(&backend, &session, std::io::Cursor::new(vec![1; 10]), "test-bucket", "k", 100, IDLE)
+            .await
+            .expect_err("denied");
+        assert!(matches!(error, UploadError::Denied));
+        assert!(backend.put_object_calls().is_empty());
     }
 
     #[test]
@@ -278,7 +293,7 @@ mod tests {
         let backend = DummyBackend::new();
         assert_eq!(run(&backend, vec![7; 1000], 4096).await.expect("upload"), 1000);
         let calls = backend.put_object_calls();
-        assert_eq!((calls[0].bucket.as_str(), calls[0].key.as_str()), ("b", "dir/k"));
+        assert_eq!((calls[0].bucket.as_str(), calls[0].key.as_str()), ("test-bucket", "dir/k"));
     }
 
     #[tokio::test]
@@ -294,6 +309,7 @@ mod tests {
         let backend = DummyBackend::new();
         backend.queue_create_multipart_upload_ok("u1");
         backend.queue_upload_part_ok("e1");
+        backend.queue_upload_part_ok("e2");
         backend.queue_complete_multipart_upload_ok();
         let size = PART_SIZE + 5;
         let stored = run(&backend, vec![1; size], u64::try_from(size).expect("size"))
@@ -319,7 +335,7 @@ mod tests {
         let session = test_session(Protocol::TcpIngest);
         let (mut client, server) = tokio::io::duplex(64);
         client.write_all(b"partial").await.expect("write");
-        let error = upload(&backend, &session, server, "b", "k", 1024, Duration::from_millis(50))
+        let error = upload(&backend, &session, server, "test-bucket", "k", 1024, Duration::from_millis(50))
             .await
             .expect_err("idle");
         assert!(matches!(error, UploadError::IdleTimeout));
