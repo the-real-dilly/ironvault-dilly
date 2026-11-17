@@ -14,6 +14,8 @@
 
 #[cfg(feature = "sftp")]
 use crate::init::init_sftp_system;
+#[cfg(feature = "tcp-ingest")]
+use crate::init::init_tcp_ingest_system;
 #[cfg(feature = "webdav")]
 use crate::init::init_webdav_system;
 #[cfg(feature = "ftps")]
@@ -38,6 +40,7 @@ pub(crate) struct ProtocolShutdownSenders {
     pub(crate) ftps: Option<ShutdownHandle>,
     pub(crate) webdav: Option<ShutdownHandle>,
     pub(crate) sftp: Option<ShutdownHandle>,
+    pub(crate) tcp_ingest: Option<ShutdownHandle>,
 }
 
 pub(crate) async fn init_protocol_shutdown_senders(server_ctx: Arc<ServerContextSlot>) -> Result<ProtocolShutdownSenders> {
@@ -45,7 +48,8 @@ pub(crate) async fn init_protocol_shutdown_senders(server_ctx: Arc<ServerContext
         ftp: init_ftp_protocol(server_ctx.clone()).await?,
         ftps: init_ftps_protocol(server_ctx.clone()).await?,
         webdav: init_webdav_protocol(server_ctx.clone()).await?,
-        sftp: init_sftp_protocol(server_ctx).await?,
+        sftp: init_sftp_protocol(server_ctx.clone()).await?,
+        tcp_ingest: init_tcp_ingest_protocol(server_ctx).await?,
     })
 }
 
@@ -86,6 +90,16 @@ async fn init_sftp_protocol(server_ctx: Arc<ServerContextSlot>) -> Result<Option
 
 #[cfg(not(feature = "sftp"))]
 async fn init_sftp_protocol(_server_ctx: Arc<ServerContextSlot>) -> Result<Option<ShutdownHandle>> {
+    Ok(None)
+}
+
+#[cfg(feature = "tcp-ingest")]
+async fn init_tcp_ingest_protocol(server_ctx: Arc<ServerContextSlot>) -> Result<Option<ShutdownHandle>> {
+    init_protocol("tcp_ingest", || init_tcp_ingest_system(server_ctx)).await
+}
+
+#[cfg(not(feature = "tcp-ingest"))]
+async fn init_tcp_ingest_protocol(_server_ctx: Arc<ServerContextSlot>) -> Result<Option<ShutdownHandle>> {
     Ok(None)
 }
 

@@ -254,6 +254,15 @@ pub fn is_operation_supported(protocol: super::session::Protocol, action: &S3Act
             S3Action::GetObjectAcl => false,
             S3Action::PutObjectAcl => false,
         },
+        // One-way ingest: the stream can only create objects, never read, list or delete.
+        super::session::Protocol::TcpIngest => matches!(
+            action,
+            S3Action::PutObject
+                | S3Action::CreateMultipartUpload
+                | S3Action::UploadPart
+                | S3Action::CompleteMultipartUpload
+                | S3Action::AbortMultipartUpload
+        ),
     }
 }
 

@@ -1744,3 +1744,52 @@ mod tests {
         });
     }
 }
+
+/// Start the one-way TCP ingest listener when RUSTFS_TCP_INGEST_ENABLE is set.
+///
+/// Each connection sends one `UPLOAD <access_key> <secret_key> <bucket> <key>` line followed by
+/// the object bytes; the object is stored only on a clean close within the size limit.
+#[cfg(feature = "tcp-ingest")]
+#[instrument(skip_all)]
+pub async fn init_tcp_ingest_system(
+    server_ctx: Arc<ServerContextSlot>,
+) -> Result<Option<ShutdownHandle>, Box<dyn std::error::Error + Send + Sync>> {
+    use rustfs_config::{
+        DEFAULT_TCP_INGEST_ADDRESS, DEFAULT_TCP_INGEST_IDLE_TIMEOUT_SECS, DEFAULT_TCP_INGEST_MAX_CONNECTIONS,
+        DEFAULT_TCP_INGEST_MAX_OBJECT_SIZE, ENV_TCP_INGEST_ADDRESS, ENV_TCP_INGEST_ENABLE, ENV_TCP_INGEST_IDLE_TIMEOUT,
+        ENV_TCP_INGEST_MAX_CONNECTIONS, ENV_TCP_INGEST_MAX_OBJECT_SIZE,
+    };
+    use rustfs_protocols::{TcpIngestConfig, TcpIngestServer};
+
+    if !rustfs_utils::get_env_bool(ENV_TCP_INGEST_ENABLE, false) {
+        return Ok(None);
+    }
+    let address = rustfs_utils::get_env_str(ENV_TCP_INGEST_ADDRESS, DEFAULT_TCP_INGEST_ADDRESS);
+    let config = TcpIngestConfig {
+        bind_addr: parse_and_normalize_server_address(&address).await?,
+        max_object_size: rustfs_utils::get_env_u64(ENV_TCP_INGEST_MAX_OBJECT_SIZE, DEFAULT_TCP_INGEST_MAX_OBJECT_SIZE),
+        max_connections: get_env_usize(ENV_TCP_INGEST_MAX_CONNECTIONS, DEFAULT_TCP_INGEST_MAX_CONNECTIONS),
+        idle_timeout: std::time::Duration::from_secs(rustfs_utils::get_env_u64(
+            ENV_TCP_INGEST_IDLE_TIMEOUT,
+            DEFAULT_TCP_INGEST_IDLE_TIMEOUT_SECS,
+        )),
+    };
+    let server = TcpIngestServer::new(config, protocol_storage_client_for_server(server_ctx))?;
+    let bind_addr = server.config().bind_addr;
+    let listener = tokio::net::TcpListener::bind(bind_addr).await?;
+    let (shutdown_tx, shutdown_rx) = tokio::sync::broadcast::channel(1);
+    let task_handle = tokio::spawn(async move {
+        server.serve(listener, shutdown_rx).await;
+    });
+    info!(
+        target: "rustfs::init",
+        event = EVENT_PROTOCOL_RUNTIME_STATE,
+        component = LOG_COMPONENT_INIT,
+        subsystem = LOG_SUBSYSTEM_PROTOCOL,
+        protocol = "tcp_ingest",
+        state = "started",
+        bind_addr = %bind_addr,
+        "Protocol runtime started"
+    );
+    Ok(Some(ShutdownHandle::new(shutdown_tx, task_handle)))
+}
