@@ -28,6 +28,7 @@
 //! reply, clients learn of rejection only by the object not appearing, and the credential
 //! travels in cleartext: bind to loopback or a trusted network, or tunnel the connection.
 
+pub mod client;
 pub mod config;
 mod server;
 mod upload;

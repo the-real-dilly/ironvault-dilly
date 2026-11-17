@@ -111,6 +111,11 @@ webdav = ["dep:dav-server", "dep:hyper", "dep:hyper-util", "dep:http-body-util",
 tcp-ingest = ["dep:subtle"]
 sftp = ["dep:russh", "dep:russh-sftp", "dep:uuid", "dep:subtle", "dep:tokio-util", "dep:socket2", "dep:urlencoding"]
 
+[[bin]]
+name = "rustfs-tcp-send"
+path = "src/bin/rustfs-tcp-send.rs"
+required-features = ["tcp-ingest"]
+
 [dependencies]
 hotpath.workspace = true
 # Core RustFS dependencies
