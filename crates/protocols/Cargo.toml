@@ -108,7 +108,13 @@ swift = [
     "dep:async-compression",
 ]
 webdav = ["dep:dav-server", "dep:hyper", "dep:hyper-util", "dep:http-body-util", "dep:tokio-rustls", "dep:base64-simd", "dep:rustls", "dep:percent-encoding", "dep:rustfs-tls-runtime", "dep:subtle"]
+tcp-ingest = ["dep:subtle"]
 sftp = ["dep:russh", "dep:russh-sftp", "dep:uuid", "dep:subtle", "dep:tokio-util", "dep:socket2", "dep:urlencoding"]
+
+[[bin]]
+name = "rustfs-tcp-send"
+path = "src/bin/rustfs-tcp-send.rs"
+required-features = ["tcp-ingest"]
 
 [dependencies]
 hotpath.workspace = true
@@ -122,7 +128,7 @@ rustfs-storage-api = { workspace = true }
 rustfs-tls-runtime = { workspace = true, optional = true }
 
 # Async dependencies
-tokio = { workspace = true, features = ["fs", "io-util", "net", "rt", "sync", "time"] }
+tokio = { workspace = true, features = ["fs", "io-std", "io-util", "net", "rt", "sync", "time"] }
 tracing = { workspace = true }
 futures-util = { workspace = true }
 

@@ -169,3 +169,23 @@ pub const DEFAULT_SFTP_READ_ONLY: bool = false;
 
 /// Default SSH identification string (no version disclosure).
 pub const DEFAULT_SFTP_BANNER: &str = "SSH-2.0-RustFS";
+
+/// Default TCP ingest listener bind address. Loopback only: the stream carries the
+/// credential in cleartext, so exposing it beyond a trusted network is an explicit choice.
+pub const DEFAULT_TCP_INGEST_ADDRESS: &str = "127.0.0.1:8023";
+
+/// Default maximum object size accepted on one TCP ingest stream (5 GiB).
+pub const DEFAULT_TCP_INGEST_MAX_OBJECT_SIZE: u64 = 5 * 1024 * 1024 * 1024;
+
+/// Default maximum concurrent TCP ingest connections.
+pub const DEFAULT_TCP_INGEST_MAX_CONNECTIONS: usize = 64;
+
+/// Default seconds a client may take to send the header line, and the longest it may stall mid-stream.
+pub const DEFAULT_TCP_INGEST_IDLE_TIMEOUT_SECS: u64 = 30;
+
+/// TCP ingest environment variable names
+pub const ENV_TCP_INGEST_ENABLE: &str = "RUSTFS_TCP_INGEST_ENABLE";
+pub const ENV_TCP_INGEST_ADDRESS: &str = "RUSTFS_TCP_INGEST_ADDRESS";
+pub const ENV_TCP_INGEST_MAX_OBJECT_SIZE: &str = "RUSTFS_TCP_INGEST_MAX_OBJECT_SIZE";
+pub const ENV_TCP_INGEST_MAX_CONNECTIONS: &str = "RUSTFS_TCP_INGEST_MAX_CONNECTIONS";
+pub const ENV_TCP_INGEST_IDLE_TIMEOUT: &str = "RUSTFS_TCP_INGEST_IDLE_TIMEOUT";

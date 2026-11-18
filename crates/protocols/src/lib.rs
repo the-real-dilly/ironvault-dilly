@@ -29,6 +29,9 @@ pub mod webdav;
 #[cfg(feature = "sftp")]
 pub mod sftp;
 
+#[cfg(feature = "tcp-ingest")]
+pub mod tcp_ingest;
+
 pub use common::session::Protocol;
 pub use common::{AuthorizationError, ProtocolPrincipal, S3Action, SessionContext, authorize_operation};
 
@@ -43,6 +46,9 @@ pub use webdav::{config::WebDavConfig, server::WebDavServer};
 
 #[cfg(feature = "sftp")]
 pub use sftp::{SftpConfig, SftpInitError, SftpServer};
+
+#[cfg(feature = "tcp-ingest")]
+pub use tcp_ingest::{TcpIngestConfig, TcpIngestInitError, TcpIngestServer};
 
 #[cfg(all(test, feature = "fips", feature = "ftps", feature = "webdav"))]
 mod fips_tests {

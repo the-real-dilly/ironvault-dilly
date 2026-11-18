@@ -26,6 +26,7 @@ pub enum Protocol {
     Swift,
     WebDav,
     Sftp,
+    TcpIngest,
 }
 
 /// Protocol principal representing an authenticated user
@@ -214,6 +215,7 @@ mod regression_prevention {
                 Protocol::Swift => {}
                 Protocol::WebDav => {}
                 Protocol::Sftp => {}
+                Protocol::TcpIngest => {}
             }
         }
     }

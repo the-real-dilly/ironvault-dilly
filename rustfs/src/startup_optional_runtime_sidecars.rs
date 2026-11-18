@@ -45,6 +45,7 @@ enum OptionalRuntimeShutdownStep {
     Ftps,
     Webdav,
     Sftp,
+    TcpIngest,
 }
 
 impl OptionalRuntimeShutdownStep {
@@ -54,6 +55,7 @@ impl OptionalRuntimeShutdownStep {
             Self::Ftps => "ftps",
             Self::Webdav => "webdav",
             Self::Sftp => "sftp",
+            Self::TcpIngest => "tcp_ingest",
         }
     }
 }
@@ -73,11 +75,20 @@ fn optional_runtime_shutdown_steps(protocols: &ProtocolShutdownSenders) -> Vec<O
     if protocols.sftp.is_some() {
         steps.push(OptionalRuntimeShutdownStep::Sftp);
     }
+    if protocols.tcp_ingest.is_some() {
+        steps.push(OptionalRuntimeShutdownStep::TcpIngest);
+    }
     steps
 }
 
 pub(crate) fn prepare_optional_runtime_shutdowns(optional_runtimes: OptionalRuntimeServices) -> Vec<ShutdownHandle> {
-    let ProtocolShutdownSenders { ftp, ftps, webdav, sftp } = optional_runtimes.protocols;
+    let ProtocolShutdownSenders {
+        ftp,
+        ftps,
+        webdav,
+        sftp,
+        tcp_ingest,
+    } = optional_runtimes.protocols;
 
     let mut protocol_shutdowns = Vec::new();
     if let Some(handle) = ftp {
@@ -94,6 +105,10 @@ pub(crate) fn prepare_optional_runtime_shutdowns(optional_runtimes: OptionalRunt
     }
     if let Some(handle) = sftp {
         log_protocol_stopping(OptionalRuntimeShutdownStep::Sftp);
+        protocol_shutdowns.push(handle);
+    }
+    if let Some(handle) = tcp_ingest {
+        log_protocol_stopping(OptionalRuntimeShutdownStep::TcpIngest);
         protocol_shutdowns.push(handle);
     }
 
@@ -164,6 +179,7 @@ mod tests {
             ftps: Some(completed_shutdown_handle()),
             webdav: Some(completed_shutdown_handle()),
             sftp: Some(completed_shutdown_handle()),
+            tcp_ingest: None,
         };
 
         assert_eq!(
@@ -185,6 +201,7 @@ mod tests {
             ftps: None,
             webdav: Some(observed_shutdown_handle("webdav", events.clone())),
             sftp: None,
+            tcp_ingest: None,
         };
 
         let mut protocol_shutdowns = prepare_optional_runtime_shutdowns(OptionalRuntimeServices::new(protocols));
